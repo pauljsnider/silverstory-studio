@@ -1,0 +1,2518 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Narrated Slideshow</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --text: #0f172a;
+      --muted: #334155;
+      --border: #cbd5e1;
+      --primary: #0f766e;
+      --danger: #b91c1c;
+      --focus: #1d4ed8;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Verdana, sans-serif;
+      background: linear-gradient(180deg, #e2e8f0 0%, var(--bg) 180px);
+      color: var(--text);
+    }
+    .wrap { max-width: min(1600px, 98vw); margin: 0 auto; padding: 16px; }
+    .card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      border-radius: 16px;
+      padding: 16px;
+      box-shadow: 0 8px 28px rgba(15, 23, 42, 0.08);
+    }
+    h1 { margin: 0 0 6px; font-size: clamp(2rem, 3vw, 2.5rem); }
+    .sub { margin: 0 0 14px; color: var(--muted); font-size: 1.1rem; }
+    .security-note {
+      border: 2px solid #0f766e;
+      background: #ecfeff;
+      color: #134e4a;
+      border-radius: 10px;
+      padding: 10px;
+      font-size: 1rem;
+      margin-bottom: 10px;
+    }
+    .caption-below {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: #f8fafc;
+      min-height: 70px;
+      padding: 10px;
+      font-size: 1rem;
+      line-height: 1.4;
+      margin-top: 8px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+    .step {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+      text-align: center;
+      font-weight: 700;
+      background: #f8fafc;
+      font-size: 0.98rem;
+    }
+    .step.active { border-color: var(--primary); background: #ecfeff; }
+
+    .status {
+      font-size: 1.08rem;
+      font-weight: 700;
+      min-height: 1.5em;
+      margin: 8px 0 12px;
+    }
+
+    .grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+    .create-grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+    @media (min-width: 980px) {
+      .create-grid {
+        grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+        align-items: start;
+      }
+    }
+
+    .media-box {
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      min-height: 420px;
+      height: min(76vh, 860px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #f1f5f9;
+      overflow: hidden;
+      position: relative;
+    }
+    .media-box img, .media-box video {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+      background: #0f172a;
+    }
+
+    .caption {
+      position: absolute;
+      left: 8px;
+      right: 8px;
+      bottom: 8px;
+      background: rgba(0, 0, 0, 0.75);
+      color: #fff;
+      border-radius: 8px;
+      padding: 10px;
+      font-size: 1.02rem;
+      line-height: 1.4;
+      min-height: 50px;
+    }
+
+    .meta { font-size: 1.05rem; font-weight: 700; margin: 8px 0; }
+
+    input[type='text'], input[type='file'] {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      margin: 6px 0 10px;
+    }
+
+    .controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    button {
+      border: none;
+      border-radius: 12px;
+      min-height: 54px;
+      min-width: 140px;
+      padding: 12px 14px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    button:focus-visible { outline: 4px solid var(--focus); outline-offset: 2px; }
+    button[disabled] { opacity: 0.45; cursor: not-allowed; }
+    .primary { background: var(--primary); color: #fff; }
+    .danger { background: var(--danger); color: #fff; }
+    .neutral { background: #475569; color: #fff; }
+    .playing-state {
+      background: #16a34a !important;
+      color: #fff !important;
+      box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.22);
+    }
+    .paused-state {
+      background: #f59e0b !important;
+      color: #111827 !important;
+      box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
+    }
+
+    .reorder-list {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 8px;
+      max-height: 260px;
+      overflow: auto;
+      background: #f8fafc;
+    }
+    .reorder-item {
+      display: grid;
+      grid-template-columns: 96px 1fr auto;
+      gap: 8px;
+      align-items: center;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+      background: #fff;
+      margin-bottom: 6px;
+    }
+    .order-thumb {
+      width: 96px;
+      height: 72px;
+      border-radius: 6px;
+      overflow: hidden;
+      background: #0f172a;
+      border: 1px solid #94a3b8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .order-thumb img, .order-thumb video {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      background: #0f172a;
+    }
+    .order-label {
+      min-width: 0;
+      line-height: 1.35;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .reorder-item.active {
+      border-color: var(--primary);
+      background: #ecfeff;
+    }
+    .reorder-actions { display: flex; gap: 6px; }
+    .saved-badge {
+      display: inline-block;
+      margin-left: 6px;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #dcfce7;
+      color: #166534;
+      border: 1px solid #86efac;
+      font-size: 0.85rem;
+      font-weight: 700;
+      vertical-align: middle;
+    }
+    .mini-btn {
+      min-width: 72px;
+      min-height: 40px;
+      padding: 8px;
+      font-size: 0.92rem;
+      border-radius: 8px;
+    }
+    .story-play {
+      min-height: 64px;
+      min-width: 180px;
+      font-size: 1.15rem;
+    }
+    .next-step {
+      border: 2px solid #0f766e;
+      border-radius: 10px;
+      background: #ecfeff;
+      color: #134e4a;
+      padding: 10px 12px;
+      font-size: 1.06rem;
+      line-height: 1.4;
+      margin-top: 10px;
+      font-weight: 700;
+    }
+    .project-bar {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: #f8fafc;
+      padding: 10px;
+      margin-bottom: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+    .autosave-note {
+      border: 2px solid #86efac;
+      border-radius: 10px;
+      background: #f0fdf4;
+      color: #166534;
+      padding: 8px 10px;
+      margin-bottom: 10px;
+      font-size: 0.98rem;
+      font-weight: 700;
+    }
+    .project-title {
+      font-size: 1.05rem;
+      font-weight: 700;
+    }
+    .save-state {
+      font-size: 0.95rem;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .completion {
+      border: 2px solid #0f766e;
+      border-radius: 10px;
+      background: #ecfeff;
+      color: #134e4a;
+      padding: 10px;
+      margin-top: 10px;
+      font-weight: 700;
+      font-size: 1.02rem;
+    }
+    .tip-note {
+      border: 2px solid #f59e0b;
+      border-radius: 10px;
+      background: #fffbeb;
+      color: #78350f;
+      padding: 10px;
+      margin: 8px 0;
+      font-size: 0.98rem;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    audio { width: 100%; height: 56px; margin-top: 8px; }
+    .transcript {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: #f8fafc;
+      min-height: 150px;
+      padding: 10px;
+      white-space: pre-wrap;
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    .share {
+      border: 2px dashed var(--primary);
+      border-radius: 10px;
+      background: #ecfeff;
+      padding: 10px;
+      word-break: break-all;
+      font-size: 1rem;
+    }
+    .share a {
+      color: #0f172a;
+      font-weight: 700;
+      text-decoration-thickness: 2px;
+    }
+    .history-list {
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      background: #f8fafc;
+      padding: 8px;
+      margin-top: 8px;
+      max-height: 260px;
+      overflow: auto;
+    }
+    .history-row {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+      margin-bottom: 8px;
+    }
+    .history-title {
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+    .history-link a {
+      word-break: break-all;
+      font-size: 0.95rem;
+    }
+    .history-meta {
+      color: var(--muted);
+      font-size: 0.9rem;
+      margin-top: 4px;
+      margin-bottom: 6px;
+    }
+
+    .hidden { display: none !important; }
+
+    .busy-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.82);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      padding: 20px;
+      text-align: center;
+    }
+    .busy-overlay.hidden { display: none !important; }
+    .busy-box {
+      max-width: 760px;
+      width: 100%;
+      border: 2px solid #67e8f9;
+      border-radius: 14px;
+      padding: 24px;
+      background: rgba(2, 6, 23, 0.72);
+    }
+    .busy-title {
+      font-size: clamp(1.7rem, 3vw, 2.2rem);
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .busy-msg {
+      font-size: 1.2rem;
+      line-height: 1.4;
+    }
+
+    .preview-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.92);
+      z-index: 9998;
+      padding: 12px;
+      overflow: auto;
+    }
+    .preview-shell {
+      max-width: 1100px;
+      margin: 0 auto;
+      border: 2px solid #67e8f9;
+      border-radius: 14px;
+      background: #f8fafc;
+      color: var(--text);
+      padding: 12px;
+    }
+    .preview-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .preview-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+    }
+    .media-box:fullscreen,
+    .media-box:-webkit-full-screen {
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      border: none;
+      background: #000;
+    }
+    .pw-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 23, 42, 0.82);
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .pw-card {
+      width: min(480px, 96vw);
+      background: #fff;
+      border: 2px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      color: var(--text);
+    }
+    .pw-title {
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1 id="pageTitle">Narrated Slideshow</h1>
+      <p id="pageSub" class="sub">Upload photos/videos, record your story once, then share one easy link.</p>
+      <div class="security-note">
+        Privacy & Security: your files are kept private. Only people with your link can view.
+        You can delete a slideshow at any time, which permanently removes photos, videos, transcript, and narration.
+      </div>
+
+      <div id="steps" class="steps hidden">
+        <div id="step1" class="step">1. Upload</div>
+        <div id="step2" class="step">2. Reorder</div>
+        <div id="step3" class="step">3. Record</div>
+        <div id="step4" class="step">4. Share</div>
+      </div>
+
+      <div id="status" class="status">Loading...</div>
+
+      <div id="createMode" class="hidden">
+        <div class="project-bar">
+          <div>
+            <div id="editorProjectTitle" class="project-title">Editing: New story</div>
+            <div id="editorSaveState" class="save-state">Not saved yet</div>
+          </div>
+          <button id="newProjectBtn" class="neutral">Start New Story</button>
+        </div>
+        <div class="autosave-note">Your work is saved automatically as you go.</div>
+
+        <label class="meta">Slideshow Title</label>
+        <input id="titleInput" type="text" maxlength="120" placeholder="Example: Family Memories" />
+
+        <label class="meta">Upload Photos and Videos</label>
+        <input id="mediaInput" type="file" multiple accept="image/jpeg,image/png,image/heic,image/heif,video/mp4,video/quicktime,video/webm,video/x-m4v" />
+
+        <div class="create-grid">
+          <div>
+            <div class="media-box">
+              <img id="createImg" class="hidden" alt="Current media" />
+              <video id="createVideo" class="hidden" preload="metadata" playsinline controls></video>
+              <div id="createEmpty">Upload photos/videos to begin.</div>
+              <div id="liveCaption" class="caption hidden"></div>
+            </div>
+            <div id="slideMeta" class="meta">Item 0 of 0</div>
+            <div class="controls">
+              <button id="prevBtn" class="neutral" disabled>Previous</button>
+              <button id="nextBtn" class="neutral" disabled>Next</button>
+              <button id="videoPlayBtn" class="primary" disabled>Play Video</button>
+              <button id="videoPauseBtn" class="neutral" disabled>Pause Video</button>
+              <button id="createFullBtn" class="neutral">Full Screen</button>
+            </div>
+          </div>
+
+          <div>
+            <div class="meta">Order (easy buttons)</div>
+            <div id="reorderList" class="reorder-list">No media yet.</div>
+
+            <div class="meta" style="margin-top:10px;">Recording</div>
+            <div class="tip-note">Tip: For best reliability, keep total narration/video around 12-15 minutes.</div>
+            <div class="controls">
+              <button id="startBtn" class="danger" disabled>Start Recording</button>
+              <button id="pauseBtn" class="neutral" disabled>Pause</button>
+              <button id="resumeBtn" class="primary" disabled>Resume</button>
+              <button id="stopBtn" class="neutral" disabled>Finish Recording</button>
+              <button id="redoBtn" class="neutral" disabled>Start Over</button>
+            </div>
+            <div id="timer" class="meta">00:00</div>
+            <audio id="createAudio" class="hidden" controls></audio>
+
+            <div class="controls">
+              <button id="testBtn" class="neutral" disabled>Preview Story</button>
+              <button id="publishBtn" class="primary" disabled>Create Share Link</button>
+            </div>
+            <div id="nextStepHint" class="next-step hidden"></div>
+
+            <div id="shareWrap" class="hidden">
+              <div class="meta">Share This Link</div>
+              <div id="shareLink" class="share"></div>
+              <div class="controls">
+                <button id="shareBtn" class="primary">Copy Share Link</button>
+                <button id="openShareBtn" class="neutral">Open Story</button>
+                <button id="editShareBtn" class="neutral">Continue Editing</button>
+              </div>
+              <div id="completionMsg" class="completion">Your story is ready to share.</div>
+            </div>
+
+            <div class="meta" style="margin-top:12px;">My Stories</div>
+            <div id="createdHistory" class="history-list">No stories created yet.</div>
+          </div>
+        </div>
+      </div>
+
+      <div id="viewMode" class="hidden">
+        <div id="viewTitle" class="meta"></div>
+        <div class="grid">
+          <div>
+            <div class="media-box">
+              <img id="viewImg" class="hidden" alt="Slideshow media" />
+              <video id="viewVideo" class="hidden" controls preload="metadata"></video>
+              <div id="viewEmpty">Loading slideshow...</div>
+              <div id="viewCaption" class="caption hidden"></div>
+            </div>
+            <div id="viewCaptionBelow" class="caption-below">Transcript line will appear here while the story plays.</div>
+            <div id="viewMeta" class="meta"></div>
+            <div class="controls">
+              <button id="viewPlayBtn" class="primary story-play">Play Story</button>
+              <button id="viewPauseBtn" class="neutral story-play">Pause Story</button>
+              <button id="viewPrevBtn" class="neutral">Previous</button>
+              <button id="viewNextBtn" class="neutral">Next</button>
+              <button id="viewFullBtn" class="neutral">Full Screen</button>
+            </div>
+          </div>
+          <div>
+            <audio id="narrationAudio" controls></audio>
+            <div class="meta" style="margin-top:10px;">Full Transcript</div>
+            <div id="fullTranscript" class="transcript">Loading transcript...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="busyOverlay" class="busy-overlay hidden" aria-live="polite">
+    <div class="busy-box">
+      <div class="busy-title">Please Wait</div>
+      <div id="busyMessage" class="busy-msg">Working...</div>
+    </div>
+  </div>
+
+  <div id="previewOverlay" class="preview-overlay hidden" aria-live="polite">
+    <div class="preview-shell">
+      <div class="preview-head">
+        <div class="preview-title">Story Preview</div>
+        <div class="controls" style="margin:0;">
+          <button id="previewRestartBtn" class="neutral">Restart</button>
+          <button id="previewCloseBtn" class="danger">Close Preview</button>
+        </div>
+      </div>
+      <div class="grid">
+        <div>
+          <div class="media-box">
+            <img id="previewImg" class="hidden" alt="Preview media" />
+            <video id="previewVideo" class="hidden" controls preload="metadata" playsinline></video>
+              <div id="previewEmpty">Preparing preview...</div>
+              <div id="previewCaption" class="caption hidden"></div>
+            </div>
+            <div id="previewCaptionBelow" class="caption-below">Transcript line will appear here while the story plays.</div>
+            <div id="previewMeta" class="meta"></div>
+            <div class="controls">
+              <button id="previewPlayBtn" class="primary story-play">Play Story</button>
+              <button id="previewPauseBtn" class="neutral story-play">Pause Story</button>
+              <button id="previewPrevBtn" class="neutral">Previous</button>
+              <button id="previewNextBtn" class="neutral">Next</button>
+              <button id="previewFullBtn" class="neutral">Full Screen</button>
+            </div>
+        </div>
+        <div>
+          <audio id="previewAudio" controls></audio>
+          <div class="meta" style="margin-top:10px;">Full Transcript</div>
+          <div id="previewTranscript" class="transcript">Transcript is generated during publish.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="pwOverlay" class="pw-overlay hidden" aria-modal="true" role="dialog" aria-labelledby="pwTitle">
+    <div class="pw-card">
+      <div id="pwTitle" class="pw-title">Enter Password</div>
+      <div id="pwPromptText" class="meta" style="font-size:1rem;">Enter password:</div>
+      <input id="pwInput" type="password" autocomplete="current-password" />
+      <div class="controls">
+        <button id="pwOkBtn" class="primary">Continue</button>
+        <button id="pwCancelBtn" class="neutral">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script>
+    const appConfig = window.APP_CONFIG || {};
+    const API_BASE = String(appConfig.apiBase || '').replace(/\/+$/, '');
+    const APP_PASSWORD = String(appConfig.appPassword || '');
+
+    const qs = new URLSearchParams(location.search);
+    const slideshowId = qs.get('id');
+    const editStoryId = qs.get('edit');
+
+    if (!API_BASE) {
+      document.body.innerHTML = '<div style=\"padding:24px;font-family:Verdana,sans-serif;font-size:20px;\">Missing app config. Set <code>APP_CONFIG.apiBase</code> in <code>config.js</code>.</div>';
+      throw new Error('Missing APP_CONFIG.apiBase');
+    }
+
+    const statusEl = document.getElementById('status');
+    const stepsEl = document.getElementById('steps');
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step3 = document.getElementById('step3');
+    const step4 = document.getElementById('step4');
+    const pageTitle = document.getElementById('pageTitle');
+    const pageSub = document.getElementById('pageSub');
+
+    const createMode = document.getElementById('createMode');
+    const viewMode = document.getElementById('viewMode');
+    const editorProjectTitle = document.getElementById('editorProjectTitle');
+    const editorSaveState = document.getElementById('editorSaveState');
+    const newProjectBtn = document.getElementById('newProjectBtn');
+
+    const titleInput = document.getElementById('titleInput');
+    const mediaInput = document.getElementById('mediaInput');
+    const createImg = document.getElementById('createImg');
+    const createVideo = document.getElementById('createVideo');
+    const createEmpty = document.getElementById('createEmpty');
+    const slideMeta = document.getElementById('slideMeta');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    const videoPlayBtn = document.getElementById('videoPlayBtn');
+    const videoPauseBtn = document.getElementById('videoPauseBtn');
+    const createFullBtn = document.getElementById('createFullBtn');
+    const reorderList = document.getElementById('reorderList');
+
+    const startBtn = document.getElementById('startBtn');
+    const pauseBtn = document.getElementById('pauseBtn');
+    const resumeBtn = document.getElementById('resumeBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    const timerEl = document.getElementById('timer');
+    const createAudio = document.getElementById('createAudio');
+    const testBtn = document.getElementById('testBtn');
+    const publishBtn = document.getElementById('publishBtn');
+    const nextStepHint = document.getElementById('nextStepHint');
+    const shareWrap = document.getElementById('shareWrap');
+    const shareLink = document.getElementById('shareLink');
+    const shareBtn = document.getElementById('shareBtn');
+    const openShareBtn = document.getElementById('openShareBtn');
+    const editShareBtn = document.getElementById('editShareBtn');
+    const completionMsg = document.getElementById('completionMsg');
+    const createdHistory = document.getElementById('createdHistory');
+    const busyOverlay = document.getElementById('busyOverlay');
+    const busyMessage = document.getElementById('busyMessage');
+    const previewOverlay = document.getElementById('previewOverlay');
+    const previewImg = document.getElementById('previewImg');
+    const previewVideo = document.getElementById('previewVideo');
+    const previewEmpty = document.getElementById('previewEmpty');
+    const previewCaption = document.getElementById('previewCaption');
+    const previewCaptionBelow = document.getElementById('previewCaptionBelow');
+    const previewMeta = document.getElementById('previewMeta');
+    const previewPlayBtn = document.getElementById('previewPlayBtn');
+    const previewPauseBtn = document.getElementById('previewPauseBtn');
+    const previewPrevBtn = document.getElementById('previewPrevBtn');
+    const previewNextBtn = document.getElementById('previewNextBtn');
+    const previewFullBtn = document.getElementById('previewFullBtn');
+    const previewAudio = document.getElementById('previewAudio');
+    const previewTranscript = document.getElementById('previewTranscript');
+    const previewRestartBtn = document.getElementById('previewRestartBtn');
+    const previewCloseBtn = document.getElementById('previewCloseBtn');
+    const pwOverlay = document.getElementById('pwOverlay');
+    const pwPromptText = document.getElementById('pwPromptText');
+    const pwInput = document.getElementById('pwInput');
+    const pwOkBtn = document.getElementById('pwOkBtn');
+    const pwCancelBtn = document.getElementById('pwCancelBtn');
+
+    const viewTitle = document.getElementById('viewTitle');
+    const viewImg = document.getElementById('viewImg');
+    const viewVideo = document.getElementById('viewVideo');
+    const viewEmpty = document.getElementById('viewEmpty');
+    const viewCaption = document.getElementById('viewCaption');
+    const viewCaptionBelow = document.getElementById('viewCaptionBelow');
+    const viewMeta = document.getElementById('viewMeta');
+    const viewPlayBtn = document.getElementById('viewPlayBtn');
+    const viewPauseBtn = document.getElementById('viewPauseBtn');
+    const viewPrevBtn = document.getElementById('viewPrevBtn');
+    const viewNextBtn = document.getElementById('viewNextBtn');
+    const viewFullBtn = document.getElementById('viewFullBtn');
+    const narrationAudio = document.getElementById('narrationAudio');
+    const fullTranscript = document.getElementById('fullTranscript');
+
+    let items = []; // {file, kind, name, previewUrl, durationSec}
+    let currentIndex = 0;
+
+    let mediaRecorder = null;
+    let chunks = [];
+    let recordingBlob = null;
+    let recordingUrl = null;
+    let isRecording = false;
+    let isPaused = false;
+    let startMs = 0;
+    let pausedAtMs = 0;
+    let pausedTotalMs = 0;
+    let timerInterval = null;
+
+    // marker index == media index start time in narration seconds
+    let markers = [0];
+    let previewSegments = [];
+    let previewOpen = false;
+    let hasPreviewed = false;
+    const VIDEO_BG_VOLUME = 0.2;
+    const DRAFT_DB_NAME = 'narrated-slideshow-db';
+    const DRAFT_STORE = 'drafts';
+    const DRAFT_KEY = 'create-draft-v1';
+    const CREATED_HISTORY_KEY = 'narrated-slideshow-created-v1';
+    let draftSaveTimer = null;
+    let suppressDraftSave = false;
+    let lastDraftSavedAt = 0;
+    const processingTimers = {};
+    let currentProjectId = '';
+    let currentProjectMode = 'new';
+    let existingAudioKey = '';
+    let existingJobName = '';
+    let existingTranscriptText = '';
+    let existingTranscriptSegments = [];
+
+    function openDraftDb() {
+      return new Promise((resolve, reject) => {
+        if (!window.indexedDB) {
+          resolve(null);
+          return;
+        }
+        const req = indexedDB.open(DRAFT_DB_NAME, 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(DRAFT_STORE)) db.createObjectStore(DRAFT_STORE);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error || new Error('Could not open draft database'));
+      });
+    }
+
+    async function getDraftRecord() {
+      const db = await openDraftDb();
+      if (!db) return null;
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(DRAFT_STORE, 'readonly');
+        const store = tx.objectStore(DRAFT_STORE);
+        const req = store.get(DRAFT_KEY);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => reject(req.error || new Error('Could not read draft'));
+      });
+    }
+
+    async function setDraftRecord(value) {
+      const db = await openDraftDb();
+      if (!db) return;
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(DRAFT_STORE, 'readwrite');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('Could not save draft'));
+        tx.objectStore(DRAFT_STORE).put(value, DRAFT_KEY);
+      });
+    }
+
+    async function clearDraftRecord() {
+      const db = await openDraftDb();
+      if (!db) return;
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(DRAFT_STORE, 'readwrite');
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error || new Error('Could not clear draft'));
+        tx.objectStore(DRAFT_STORE).delete(DRAFT_KEY);
+      });
+    }
+
+    function loadCreatedHistory() {
+      try {
+        const raw = localStorage.getItem(CREATED_HISTORY_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        const list = Array.isArray(arr) ? arr : [];
+        return list.map((x) => ({
+          id: x.id || '',
+          title: x.title || 'Narrated Slideshow',
+          url: x.url || '',
+          createdAt: x.createdAt || '',
+          status: x.status || 'ready',
+          stage: x.stage || '',
+          error: x.error || '',
+          updatedAt: x.updatedAt || ''
+        }));
+      } catch (_) {
+        return [];
+      }
+    }
+
+    function saveCreatedHistory(list) {
+      try {
+        localStorage.setItem(CREATED_HISTORY_KEY, JSON.stringify(list.slice(0, 30)));
+      } catch (_) {}
+    }
+
+    function statusLabel(row) {
+      const s = (row.status || '').toLowerCase();
+      if (s === 'ready') return 'Ready';
+      if (s === 'transcribing') return 'Making transcript...';
+      if (s === 'processing') return 'Processing...';
+      if (s === 'failed') return `Failed${row.error ? `: ${row.error}` : ''}`;
+      return 'Working...';
+    }
+
+    function upsertCreatedHistoryEntry(entry) {
+      const list = loadCreatedHistory();
+      const key = entry.id || entry.url;
+      const merged = [entry, ...list.filter((x) => (x.id || x.url) !== key)];
+      saveCreatedHistory(merged);
+      renderCreatedHistory();
+    }
+
+    function patchHistoryEntry(id, patch) {
+      const list = loadCreatedHistory();
+      const next = list.map((row) => {
+        if (row.id !== id) return row;
+        return { ...row, ...patch, updatedAt: new Date().toISOString() };
+      });
+      saveCreatedHistory(next);
+      renderCreatedHistory();
+    }
+
+    async function refreshStoryStatus(id) {
+      const res = await fetch(`${API_BASE}/api/slideshow/refresh?id=${encodeURIComponent(id)}`);
+      if (!res.ok) throw new Error(`Refresh failed (${res.status})`);
+      return await res.json();
+    }
+
+    async function retryStoryTranscription(id) {
+      const res = await fetch(`${API_BASE}/api/slideshow/retry-transcription`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id })
+      });
+      if (!res.ok) throw new Error(`Retry failed (${res.status})`);
+      return await res.json();
+    }
+
+    async function getMediaPlaybackUrl(key, cache) {
+      if (!key) throw new Error('Missing media key');
+      if (cache && cache.has(key)) return cache.get(key);
+      const res = await fetch(`${API_BASE}/api/slideshow/media-url?key=${encodeURIComponent(key)}`);
+      if (!res.ok) throw new Error(`Media URL failed (${res.status})`);
+      const j = await res.json();
+      const url = j.url || '';
+      if (!url) throw new Error('No media URL returned');
+      if (cache) cache.set(key, url);
+      return url;
+    }
+
+    function requestPassword(promptText) {
+      return new Promise((resolve) => {
+        pwPromptText.textContent = promptText || 'Enter password:';
+        pwInput.value = '';
+        pwOverlay.classList.remove('hidden');
+        setTimeout(() => pwInput.focus(), 0);
+
+        const close = (value) => {
+          pwOverlay.classList.add('hidden');
+          pwOkBtn.onclick = null;
+          pwCancelBtn.onclick = null;
+          pwInput.onkeydown = null;
+          resolve(value);
+        };
+        pwOkBtn.onclick = () => close(pwInput.value || '');
+        pwCancelBtn.onclick = () => close(null);
+        pwInput.onkeydown = (e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            close(pwInput.value || '');
+          } else if (e.key === 'Escape') {
+            e.preventDefault();
+            close(null);
+          }
+        };
+      });
+    }
+
+    async function toggleFullscreenFor(el, btn) {
+      if (!el) return;
+      try {
+        if (document.fullscreenElement === el) {
+          await document.exitFullscreen();
+          if (btn) btn.textContent = 'Full Screen';
+          return;
+        }
+        await el.requestFullscreen();
+        if (btn) btn.textContent = 'Exit Full Screen';
+      } catch (_) {}
+    }
+
+    document.addEventListener('fullscreenchange', () => {
+      const active = document.fullscreenElement;
+      const setLabel = (btn, box) => {
+        if (!btn || !box) return;
+        btn.textContent = active === box ? 'Exit Full Screen' : 'Full Screen';
+      };
+      setLabel(createFullBtn, createImg.parentElement);
+      setLabel(previewFullBtn, previewImg.parentElement);
+      setLabel(viewFullBtn, viewImg.parentElement);
+    });
+
+    function stopProcessingMonitor(id) {
+      if (processingTimers[id]) {
+        clearTimeout(processingTimers[id]);
+        delete processingTimers[id];
+      }
+    }
+
+    async function runProcessingMonitor(id, intervalMs = 4000) {
+      stopProcessingMonitor(id);
+      try {
+        const manifest = await refreshStoryStatus(id);
+        const nextStatus = (manifest.processingStatus || '').toLowerCase() || 'processing';
+        patchHistoryEntry(id, {
+          status: nextStatus,
+          stage: manifest.processingStage || '',
+          error: manifest.processingError || ''
+        });
+
+        if (nextStatus === 'ready' || nextStatus === 'failed') {
+          if (nextStatus === 'ready') {
+            setStatus('One story finished processing and is ready to share.');
+          }
+          return;
+        }
+
+        const nextWait = Math.min(30000, Math.round(intervalMs * 1.5));
+        processingTimers[id] = setTimeout(() => {
+          runProcessingMonitor(id, nextWait).catch(() => {});
+        }, intervalMs);
+      } catch (_) {
+        const nextWait = Math.min(30000, Math.round(intervalMs * 1.5));
+        processingTimers[id] = setTimeout(() => {
+          runProcessingMonitor(id, nextWait).catch(() => {});
+        }, nextWait);
+      }
+    }
+
+    function resumePendingMonitors() {
+      const list = loadCreatedHistory();
+      list.forEach((row) => {
+        const s = (row.status || '').toLowerCase();
+        if (row.id && (s === 'processing' || s === 'transcribing')) {
+          runProcessingMonitor(row.id).catch(() => {});
+        }
+      });
+    }
+
+    async function copyText(text) {
+      if (!text) return false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return true;
+        }
+      } catch (_) {}
+      try {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        const ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return !!ok;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    function renderCreatedHistory() {
+      const list = loadCreatedHistory();
+      if (!list.length) {
+        createdHistory.innerHTML = 'No stories created yet.';
+        return;
+      }
+      createdHistory.innerHTML = '';
+      list.forEach((row, idx) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'history-row';
+
+        const title = document.createElement('div');
+        title.className = 'history-title';
+        title.textContent = row.title || 'Narrated Slideshow';
+        wrap.appendChild(title);
+
+        const link = document.createElement('div');
+        link.className = 'history-link';
+        const a = document.createElement('a');
+        a.href = row.url;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = 'Open Story Link';
+        link.appendChild(a);
+        wrap.appendChild(link);
+
+        const meta = document.createElement('div');
+        meta.className = 'history-meta';
+        const parts = [];
+        if (row.createdAt) parts.push(`Created: ${new Date(row.createdAt).toLocaleString()}`);
+        parts.push(`Status: ${statusLabel(row)}`);
+        meta.textContent = parts.join(' | ');
+        wrap.appendChild(meta);
+
+        const controls = document.createElement('div');
+        controls.className = 'controls';
+
+        const copyBtn = document.createElement('button');
+        copyBtn.className = 'primary mini-btn';
+        copyBtn.textContent = 'Copy Link';
+        copyBtn.onclick = async () => {
+          const ok = await copyText(row.url);
+          setStatus(ok ? 'Link copied.' : 'Could not copy link. You can open it and copy.');
+        };
+        controls.appendChild(copyBtn);
+
+        if (row.id) {
+          const editBtn = document.createElement('button');
+          editBtn.className = 'neutral mini-btn';
+          editBtn.textContent = 'Edit';
+          editBtn.onclick = () => {
+            loadProjectIntoBuilder(row.id).catch(() => {});
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          };
+          controls.appendChild(editBtn);
+        }
+
+        if ((row.status || '').toLowerCase() !== 'ready' && row.id) {
+          const refreshBtn = document.createElement('button');
+          refreshBtn.className = 'neutral mini-btn';
+          refreshBtn.textContent = 'Refresh';
+          refreshBtn.onclick = () => {
+            runProcessingMonitor(row.id).catch(() => {});
+          };
+          controls.appendChild(refreshBtn);
+        }
+
+        if ((row.status || '').toLowerCase() === 'failed' && row.id) {
+          const retryBtn = document.createElement('button');
+          retryBtn.className = 'primary mini-btn';
+          retryBtn.textContent = 'Retry';
+          retryBtn.onclick = async () => {
+            try {
+              await retryStoryTranscription(row.id);
+              patchHistoryEntry(row.id, { status: 'transcribing', stage: 'transcription', error: '' });
+              runProcessingMonitor(row.id).catch(() => {});
+              setStatus('Retry started. We will keep checking in the background.');
+            } catch (e) {
+              setStatus(`Retry failed: ${e.message}`);
+            }
+          };
+          controls.appendChild(retryBtn);
+        }
+
+        if (row.id) {
+          const deleteBtn = document.createElement('button');
+          deleteBtn.className = 'danger mini-btn';
+          deleteBtn.textContent = 'Delete';
+          deleteBtn.onclick = async () => {
+            if (!confirm('Delete this story permanently from cloud storage?')) return;
+            try {
+              const d = await fetch(`${API_BASE}/api/slideshow/delete`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: row.id })
+              });
+              if (!d.ok) throw new Error(`Delete failed (${d.status})`);
+              stopProcessingMonitor(row.id);
+              const next = loadCreatedHistory().filter((x) => x.id !== row.id);
+              saveCreatedHistory(next);
+              renderCreatedHistory();
+              setStatus('Story deleted.');
+            } catch (e) {
+              setStatus(e.message || 'Delete failed');
+            }
+          };
+          controls.appendChild(deleteBtn);
+        }
+
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'neutral mini-btn';
+        removeBtn.textContent = 'Remove';
+        removeBtn.onclick = () => {
+          const next = loadCreatedHistory();
+          next.splice(idx, 1);
+          saveCreatedHistory(next);
+          if (row.id) stopProcessingMonitor(row.id);
+          renderCreatedHistory();
+        };
+        controls.appendChild(removeBtn);
+
+        wrap.appendChild(controls);
+        createdHistory.appendChild(wrap);
+      });
+    }
+
+    function setEditorContext(title, mode) {
+      currentProjectMode = mode || currentProjectMode;
+      const t = (title || '').trim() || 'New story';
+      editorProjectTitle.textContent = `Editing: ${t}`;
+    }
+
+    function setEditorSaveState(text) {
+      editorSaveState.textContent = text;
+    }
+
+    function markEditorDirty() {
+      setEditorSaveState('Unsaved changes');
+    }
+
+    async function clearBuilderState(fullReset = false) {
+      items.forEach((it) => {
+        if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
+      });
+      items = [];
+      currentIndex = 0;
+      markers = [0];
+      recordingBlob = null;
+      hasPreviewed = false;
+      existingAudioKey = '';
+      existingJobName = '';
+      existingTranscriptText = '';
+      existingTranscriptSegments = [];
+      if (recordingUrl) {
+        URL.revokeObjectURL(recordingUrl);
+        recordingUrl = null;
+      }
+      createAudio.classList.add('hidden');
+      createAudio.removeAttribute('src');
+      createAudio.load();
+      shareWrap.classList.add('hidden');
+      shareLink.textContent = '';
+      if (fullReset) {
+        titleInput.value = '';
+        timerEl.textContent = '00:00';
+      }
+      renderReorderList();
+      renderCurrentItem();
+      refreshButtons();
+    }
+
+    async function startNewProject() {
+      if (isRecording) {
+        setStatus('Please finish recording before starting a new story.');
+        return;
+      }
+      if (items.length || recordingBlob || titleInput.value.trim()) {
+        const ok = confirm('Start a new story? This clears the editor, but keeps My Stories history.');
+        if (!ok) return;
+      }
+      await clearBuilderState(true);
+      currentProjectId = '';
+      currentProjectMode = 'new';
+      setEditorContext('New story', 'new');
+      setEditorSaveState('Not saved yet');
+      setStatus('Step 1: Upload your photos/videos.');
+      setStep(1);
+      clearDraftRecord().catch(() => {});
+    }
+
+    async function loadProjectIntoBuilder(id) {
+      if (!id) return;
+      if (isRecording) {
+        setStatus('Please finish recording before loading another story.');
+        return;
+      }
+      setBusy(true, 'Loading story for editing...');
+      try {
+        const res = await fetch(`${API_BASE}/api/slideshow/get?id=${encodeURIComponent(id)}`);
+        if (!res.ok) throw new Error(`Load failed (${res.status})`);
+        const data = await res.json();
+
+        await clearBuilderState();
+
+        currentProjectId = id;
+        currentProjectMode = 'editing';
+        titleInput.value = data.title || '';
+        setEditorContext(titleInput.value || 'Untitled story', 'editing');
+
+        const media = Array.isArray(data.media) ? data.media : [];
+        for (const m of media) {
+          const previewUrl = await getMediaPlaybackUrl(m.key);
+          items.push({
+            file: null,
+            key: m.key,
+            kind: ((m.kind || '').toLowerCase() === 'video' || (m.mimeType || '').startsWith('video/')) ? 'video' : 'image',
+            name: m.filename || m.key.split('/').pop() || 'media',
+            previewUrl,
+            durationSec: Number(m.durationSec || 0),
+            mimeType: m.mimeType || (m.kind === 'video' ? 'video/mp4' : 'image/jpeg')
+          });
+        }
+
+        markers = Array.isArray(data.markers) && data.markers.length ? data.markers.slice(0, items.length) : [0];
+        if (!markers.length) markers = [0];
+        currentIndex = 0;
+
+        existingAudioKey = data.audioKey || '';
+        existingJobName = data.jobName || '';
+        existingTranscriptText = data.transcriptText || '';
+        existingTranscriptSegments = Array.isArray(data.transcriptSegments) ? data.transcriptSegments : [];
+        hasPreviewed = true;
+        if (existingAudioKey) {
+          createAudio.src = `${API_BASE}/api/audio/${existingAudioKey}`;
+          createAudio.classList.remove('hidden');
+        }
+
+        renderCurrentItem();
+        renderReorderList();
+        refreshButtons();
+        setEditorSaveState('Loaded from cloud');
+        setStep(items.length ? (existingAudioKey ? 4 : 2) : 1);
+        setStatus('Story loaded. You can edit and create an updated share link.');
+      } catch (e) {
+        setStatus(`Could not load story for edit: ${e.message}`);
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    function setStatus(msg) {
+      statusEl.textContent = msg;
+      if (!busyOverlay.classList.contains('hidden')) {
+        busyMessage.textContent = msg;
+      }
+    }
+    function setBusy(on, msg) {
+      if (on) {
+        busyMessage.textContent = msg || 'Working...';
+        busyOverlay.classList.remove('hidden');
+      } else {
+        busyOverlay.classList.add('hidden');
+      }
+    }
+    function setStep(n) {
+      [step1, step2, step3, step4].forEach((el) => el.classList.remove('active'));
+      if (n >= 1) step1.classList.add('active');
+      if (n >= 2) step2.classList.add('active');
+      if (n >= 3) step3.classList.add('active');
+      if (n >= 4) step4.classList.add('active');
+    }
+
+    function fmt(sec) {
+      const s = Math.max(0, Math.floor(sec));
+      const mm = String(Math.floor(s / 60)).padStart(2, '0');
+      const ss = String(s % 60).padStart(2, '0');
+      return `${mm}:${ss}`;
+    }
+
+    function elapsedSeconds() {
+      if (!startMs) return 0;
+      const now = isPaused ? pausedAtMs : Date.now();
+      return (now - startMs - pausedTotalMs) / 1000;
+    }
+
+    function updateTimer() {
+      timerEl.textContent = fmt(elapsedSeconds());
+    }
+
+    async function getVideoDuration(file) {
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(file);
+        const v = document.createElement('video');
+        v.preload = 'metadata';
+        v.onloadedmetadata = () => {
+          const d = Number(v.duration || 0);
+          URL.revokeObjectURL(url);
+          resolve(Number.isFinite(d) ? d : 0);
+        };
+        v.onerror = () => {
+          URL.revokeObjectURL(url);
+          resolve(0);
+        };
+        v.src = url;
+      });
+    }
+
+    async function fileToBase64(fileOrBlob) {
+      return new Promise((resolve, reject) => {
+        const r = new FileReader();
+        r.onload = () => {
+          const s = String(r.result || '');
+          resolve(s.split(',')[1] || '');
+        };
+        r.onerror = reject;
+        r.readAsDataURL(fileOrBlob);
+      });
+    }
+
+    async function optimizeImage(file) {
+      const maxBytes = 7_500_000;
+      if (file.size <= maxBytes) {
+        return { blob: file, mimeType: file.type || 'image/jpeg', filename: file.name };
+      }
+      const img = await createImageBitmap(file);
+      const c = document.createElement('canvas');
+      const ratio = Math.min(1, 1800 / img.width, 1800 / img.height);
+      c.width = Math.max(1, Math.round(img.width * ratio));
+      c.height = Math.max(1, Math.round(img.height * ratio));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      const qualities = [0.88, 0.8, 0.72, 0.64, 0.56];
+      for (const q of qualities) {
+        const blob = await new Promise((res) => c.toBlob(res, 'image/jpeg', q));
+        if (blob && blob.size <= maxBytes) {
+          return {
+            blob,
+            mimeType: 'image/jpeg',
+            filename: (file.name.replace(/\.[^.]+$/, '') || 'image') + '.jpg'
+          };
+        }
+      }
+      throw new Error(`${file.name} is too large. Please choose a smaller image.`);
+    }
+
+    function scheduleDraftSave(delayMs = 700) {
+      if (suppressDraftSave || slideshowId) return;
+      if (draftSaveTimer) clearTimeout(draftSaveTimer);
+      draftSaveTimer = setTimeout(() => {
+        saveDraftNow().catch(() => {});
+      }, delayMs);
+    }
+
+    async function saveDraftNow() {
+      if (suppressDraftSave || slideshowId) return;
+      const hasAnything = !!titleInput.value.trim() || items.length > 0 || !!recordingBlob;
+      if (!hasAnything) {
+        await clearDraftRecord();
+        return;
+      }
+      const draft = {
+        title: titleInput.value || '',
+        currentIndex,
+        markers: Array.isArray(markers) ? markers.slice(0, items.length) : [0],
+        hasPreviewed: !!hasPreviewed,
+        items: items.map((it) => ({
+          kind: it.kind,
+          name: it.name,
+          type: (it.file && it.file.type) || '',
+          durationSec: it.durationSec || 0,
+          blob: it.file
+        })),
+        recording: recordingBlob ? { blob: recordingBlob, type: recordingBlob.type || 'audio/webm' } : null,
+        updatedAt: new Date().toISOString()
+      };
+      await setDraftRecord(draft);
+      lastDraftSavedAt = Date.now();
+      renderReorderList();
+      setEditorSaveState('Saved on this device');
+    }
+
+    async function restoreDraftIfAvailable() {
+      if (slideshowId) return false;
+      let draft;
+      try {
+        draft = await getDraftRecord();
+      } catch (_) {
+        return false;
+      }
+      if (!draft) return false;
+
+      suppressDraftSave = true;
+      try {
+        titleInput.value = draft.title || '';
+
+        items.forEach((it) => {
+          if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
+        });
+        items = [];
+
+        const restoredItems = Array.isArray(draft.items) ? draft.items : [];
+        for (const it of restoredItems) {
+          if (!it || !it.blob) continue;
+          const blob = it.blob;
+          const previewUrl = URL.createObjectURL(blob);
+          items.push({
+            file: blob,
+            kind: it.kind === 'video' ? 'video' : 'image',
+            name: it.name || (it.kind === 'video' ? 'video' : 'image'),
+            previewUrl,
+            durationSec: Number(it.durationSec || 0)
+          });
+        }
+
+        if (recordingUrl) {
+          URL.revokeObjectURL(recordingUrl);
+          recordingUrl = null;
+        }
+        recordingBlob = null;
+        if (draft.recording && draft.recording.blob) {
+          recordingBlob = draft.recording.blob;
+          recordingUrl = URL.createObjectURL(recordingBlob);
+          createAudio.src = recordingUrl;
+          createAudio.classList.remove('hidden');
+        } else {
+          createAudio.classList.add('hidden');
+        }
+
+        hasPreviewed = !!draft.hasPreviewed;
+        markers = Array.isArray(draft.markers) && draft.markers.length ? draft.markers.slice(0, items.length) : [0];
+        if (!markers.length) markers = [0];
+        currentIndex = Math.max(0, Math.min(Number(draft.currentIndex || 0), Math.max(0, items.length - 1)));
+        lastDraftSavedAt = Date.now();
+
+        shareWrap.classList.add('hidden');
+        renderCurrentItem();
+        renderReorderList();
+        refreshButtons();
+
+        if (items.length) {
+          setStep(recordingBlob ? 4 : 2);
+          setStatus('Restored your unfinished story. Continue where you left off.');
+        } else {
+          setStep(1);
+        }
+        setEditorContext(titleInput.value || 'New story', 'editing');
+        setEditorSaveState('Restored on this device');
+      } finally {
+        suppressDraftSave = false;
+      }
+      return true;
+    }
+
+    function renderCurrentItem() {
+      if (!items.length) {
+        createImg.classList.add('hidden');
+        createVideo.classList.add('hidden');
+        createVideo.pause();
+        videoPlayBtn.disabled = true;
+        videoPauseBtn.disabled = true;
+        createEmpty.classList.remove('hidden');
+        slideMeta.textContent = 'Item 0 of 0';
+        return;
+      }
+      const item = items[currentIndex];
+      createEmpty.classList.add('hidden');
+
+      // Reset both elements first so switching between image/video feels clean.
+      createImg.classList.add('hidden');
+      createVideo.classList.add('hidden');
+      createVideo.pause();
+      createVideo.removeAttribute('src');
+      createVideo.load();
+
+      if (item.kind === 'video') {
+        createVideo.muted = false;
+        createVideo.volume = VIDEO_BG_VOLUME;
+        createVideo.loop = false;
+        createVideo.src = item.previewUrl;
+        createVideo.classList.remove('hidden');
+        videoPlayBtn.disabled = false;
+        videoPauseBtn.disabled = false;
+        createVideo.oncanplay = () => {
+          createVideo.currentTime = 0;
+          createVideo.play().catch(() => {
+            setStatus('Video ready. Tap Play Video to start it.');
+          });
+          refreshVideoPreviewState();
+          createVideo.oncanplay = null;
+        };
+      } else {
+        videoPlayBtn.disabled = true;
+        videoPauseBtn.disabled = true;
+        createImg.src = item.previewUrl;
+        createImg.classList.remove('hidden');
+      }
+      slideMeta.textContent = `Item ${currentIndex + 1} of ${items.length} (${item.kind})`;
+      refreshVideoPreviewState();
+    }
+
+    function renderReorderList() {
+      if (!items.length) {
+        reorderList.innerHTML = 'No media yet.';
+        return;
+      }
+      reorderList.innerHTML = '';
+      items.forEach((item, idx) => {
+        const row = document.createElement('div');
+        row.className = 'reorder-item';
+
+        const thumb = document.createElement('div');
+        thumb.className = 'order-thumb';
+        if (item.kind === 'video') {
+          const tv = document.createElement('video');
+          tv.src = item.previewUrl;
+          tv.muted = true;
+          tv.loop = true;
+          tv.playsInline = true;
+          tv.autoplay = true;
+          thumb.appendChild(tv);
+        } else {
+          const ti = document.createElement('img');
+          ti.src = item.previewUrl;
+          ti.alt = '';
+          thumb.appendChild(ti);
+        }
+        row.appendChild(thumb);
+
+        const label = document.createElement('div');
+        label.className = 'order-label';
+        label.textContent = `${idx + 1}. ${item.kind.toUpperCase()} - ${item.name}`;
+        if (lastDraftSavedAt && !isRecording) {
+          const saved = document.createElement('span');
+          saved.className = 'saved-badge';
+          saved.textContent = 'Saved';
+          label.appendChild(saved);
+        }
+        label.style.cursor = 'pointer';
+        label.onclick = () => {
+          currentIndex = idx;
+          renderReorderList();
+          renderCurrentItem();
+          refreshButtons();
+          scheduleDraftSave();
+        };
+        row.appendChild(label);
+        if (idx === currentIndex) row.classList.add('active');
+
+        const actions = document.createElement('div');
+        actions.className = 'reorder-actions';
+
+        const up = document.createElement('button');
+        up.className = 'mini-btn neutral';
+        up.textContent = 'Up';
+        up.disabled = idx === 0 || isRecording;
+        up.onclick = () => {
+          const tmp = items[idx - 1];
+          items[idx - 1] = items[idx];
+          items[idx] = tmp;
+          currentIndex = Math.max(0, currentIndex === idx ? idx - 1 : currentIndex === idx - 1 ? idx : currentIndex);
+          renderReorderList();
+          renderCurrentItem();
+          refreshButtons();
+          markEditorDirty();
+          scheduleDraftSave();
+        };
+
+        const down = document.createElement('button');
+        down.className = 'mini-btn neutral';
+        down.textContent = 'Down';
+        down.disabled = idx === items.length - 1 || isRecording;
+        down.onclick = () => {
+          const tmp = items[idx + 1];
+          items[idx + 1] = items[idx];
+          items[idx] = tmp;
+          currentIndex = Math.min(items.length - 1, currentIndex === idx ? idx + 1 : currentIndex === idx + 1 ? idx : currentIndex);
+          renderReorderList();
+          renderCurrentItem();
+          refreshButtons();
+          markEditorDirty();
+          scheduleDraftSave();
+        };
+
+        const remove = document.createElement('button');
+        remove.className = 'mini-btn danger';
+        remove.textContent = 'Remove';
+        remove.disabled = isRecording;
+        remove.onclick = () => {
+          const removed = items[idx];
+          if (removed && removed.previewUrl) URL.revokeObjectURL(removed.previewUrl);
+          items.splice(idx, 1);
+
+          if (!items.length) {
+            currentIndex = 0;
+            markers = [0];
+            recordingBlob = null;
+            existingAudioKey = '';
+            existingJobName = '';
+            existingTranscriptText = '';
+            existingTranscriptSegments = [];
+            lastDraftSavedAt = 0;
+            if (recordingUrl) {
+              URL.revokeObjectURL(recordingUrl);
+              recordingUrl = null;
+            }
+            createAudio.classList.add('hidden');
+            shareWrap.classList.add('hidden');
+            shareLink.textContent = '';
+            setStatus('All items removed. Upload photos/videos to continue.');
+          } else {
+            if (currentIndex >= items.length) currentIndex = items.length - 1;
+            markers = markers.slice(0, items.length);
+            if (!markers.length) markers = [0];
+          }
+
+          renderReorderList();
+          renderCurrentItem();
+          refreshButtons();
+          markEditorDirty();
+          scheduleDraftSave();
+        };
+
+        actions.appendChild(up);
+        actions.appendChild(down);
+        actions.appendChild(remove);
+        row.appendChild(actions);
+        reorderList.appendChild(row);
+      });
+    }
+
+    function refreshButtons() {
+      const hasItems = items.length > 0;
+      const hasNarration = !!recordingBlob || !!existingAudioKey;
+      prevBtn.disabled = !hasItems || currentIndex === 0;
+      nextBtn.disabled = !hasItems || currentIndex >= items.length - 1;
+      const isVideo = hasItems && items[currentIndex]?.kind === 'video';
+      videoPlayBtn.disabled = !isVideo;
+      videoPauseBtn.disabled = !isVideo;
+
+      startBtn.disabled = !hasItems || isRecording || !!recordingBlob;
+      pauseBtn.disabled = !isRecording || isPaused;
+      resumeBtn.disabled = !isRecording || !isPaused;
+      stopBtn.disabled = !isRecording;
+      redoBtn.disabled = !hasNarration || isRecording;
+      publishBtn.disabled = !hasNarration || !hasPreviewed;
+      testBtn.disabled = !hasNarration;
+
+      if (!hasNarration) {
+        nextStepHint.classList.add('hidden');
+      } else {
+        nextStepHint.classList.remove('hidden');
+        if (!hasPreviewed) {
+          nextStepHint.textContent = 'Step 5: Click "Preview Story", watch it, then close preview.';
+        } else {
+          nextStepHint.textContent = 'Step 5: Looks good. Click "Create Share Link".';
+        }
+      }
+
+      if (hasItems && !recordingBlob && !isRecording) setStep(2);
+      if (recordingBlob && !isRecording) setStep(4);
+      refreshVideoPreviewState();
+    }
+
+    function refreshVideoPreviewState() {
+      videoPlayBtn.classList.remove('playing-state', 'paused-state');
+      videoPauseBtn.classList.remove('playing-state', 'paused-state');
+
+      const isVideo = items.length > 0 && items[currentIndex]?.kind === 'video' && !createVideo.classList.contains('hidden');
+      if (!isVideo) return;
+
+      if (createVideo.paused) {
+        videoPauseBtn.classList.add('paused-state');
+      } else {
+        videoPlayBtn.classList.add('playing-state');
+      }
+    }
+
+    async function uploadAudioAndKickoff(blob) {
+      if (blob.size > 4_800_000) {
+        throw new Error('Narration is too long for upload. Please record a shorter narration.');
+      }
+      const b64 = await fileToBase64(blob);
+      const up = await fetch(`${API_BASE}/api/upload`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain' },
+        body: b64
+      });
+      if (!up.ok) throw new Error(`Audio upload failed (${up.status})`);
+      const upj = await up.json();
+      if (!upj.jobName) throw new Error('No transcription job id returned');
+      return { jobName: upj.jobName, audioKey: upj.audioKey || `audio/${upj.jobName}.webm` };
+    }
+
+    async function uploadMediaForManifest(id) {
+      const out = [];
+      for (let i = 0; i < items.length; i += 1) {
+        const it = items[i];
+        if (!it.file && it.key) {
+          out.push({
+            key: it.key,
+            filename: it.name,
+            kind: it.kind,
+            mimeType: it.mimeType || (it.kind === 'video' ? 'video/mp4' : 'image/jpeg'),
+            durationSec: it.durationSec || 0
+          });
+          continue;
+        }
+        setStatus(`Uploading ${it.kind} ${i + 1} of ${items.length}...`);
+
+        let uploadData;
+        if (it.kind === 'image') {
+          uploadData = await optimizeImage(it.file);
+        } else {
+          uploadData = {
+            blob: it.file,
+            mimeType: it.file.type || 'video/mp4',
+            filename: it.name
+          };
+        }
+
+        const createRes = await fetch(`${API_BASE}/api/slideshow/create-upload-url`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            slideshowId: id,
+            filename: uploadData.filename,
+            mimeType: uploadData.mimeType
+          })
+        });
+        if (!createRes.ok) throw new Error(`Create upload URL failed (${createRes.status})`);
+        const j = await createRes.json();
+
+        const putRes = await fetch(j.uploadUrl, {
+          method: 'PUT',
+          headers: { 'Content-Type': uploadData.mimeType },
+          body: uploadData.blob
+        });
+        if (!putRes.ok) throw new Error(`S3 upload failed (${putRes.status})`);
+
+        out.push({ key: j.key, filename: it.name, kind: it.kind, mimeType: uploadData.mimeType, durationSec: it.durationSec || 0 });
+      }
+      return out;
+    }
+
+    async function publish() {
+      if ((!recordingBlob && !existingAudioKey) || !items.length) return;
+      try {
+        publishBtn.disabled = true;
+        setBusy(true, 'Uploading story... Please keep this page open.');
+        const id = currentProjectId || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+        const createdAt = new Date().toISOString();
+        const title = titleInput.value.trim() || 'Narrated Slideshow';
+        const share = `${location.origin}${location.pathname}?id=${encodeURIComponent(id)}`;
+
+        setStatus('Saving your story...');
+        const media = await uploadMediaForManifest(id);
+        let tx = null;
+        if (recordingBlob) {
+          setStatus('Uploading narration and starting transcript in background...');
+          tx = await uploadAudioAndKickoff(recordingBlob);
+        }
+
+        const m = markers.slice(0, items.length);
+        while (m.length < items.length) m.push(0);
+
+        const audioKey = tx ? tx.audioKey : existingAudioKey;
+        const jobName = tx ? tx.jobName : existingJobName;
+        const isTranscribing = !!tx;
+        const manifest = {
+          id,
+          title,
+          createdAt,
+          media,
+          markers: m,
+          durationSec: Math.max(1, Math.round(elapsedSeconds())),
+          audioKey,
+          jobName,
+          transcriptText: isTranscribing ? '' : (existingTranscriptText || ''),
+          transcriptSegments: isTranscribing ? [] : (existingTranscriptSegments || []),
+          processingStatus: isTranscribing ? 'transcribing' : 'ready',
+          processingStage: isTranscribing ? 'transcription' : 'complete',
+          processingError: ''
+        };
+
+        setStatus('Saving slideshow...');
+        const save = await fetch(`${API_BASE}/api/slideshow/save`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(manifest)
+        });
+        if (!save.ok) throw new Error(`Save failed (${save.status})`);
+
+        shareWrap.classList.remove('hidden');
+        shareLink.textContent = '';
+        const a = document.createElement('a');
+        a.href = share;
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = share;
+        shareLink.appendChild(a);
+        upsertCreatedHistoryEntry({
+          id,
+          title,
+          url: share,
+          createdAt,
+          status: isTranscribing ? 'transcribing' : 'ready',
+          stage: isTranscribing ? 'transcription' : 'complete',
+          error: ''
+        });
+        if (isTranscribing) runProcessingMonitor(id).catch(() => {});
+        currentProjectId = id;
+        currentProjectMode = 'editing';
+        setEditorContext(title, 'editing');
+        setEditorSaveState('Saved to cloud');
+        existingAudioKey = audioKey || '';
+        existingJobName = jobName || '';
+        existingTranscriptText = isTranscribing ? '' : (existingTranscriptText || '');
+        existingTranscriptSegments = isTranscribing ? [] : (existingTranscriptSegments || []);
+        lastDraftSavedAt = 0;
+        await clearDraftRecord().catch(() => {});
+        completionMsg.textContent = isTranscribing
+          ? 'Your story link is ready. Transcript is still processing in the background.'
+          : 'Your story is ready to share.';
+        setStatus(isTranscribing
+          ? 'Link created. Transcript is processing in background.'
+          : 'Finished. Your story is ready to share.');
+        setStep(4);
+        setBusy(false);
+      } catch (e) {
+        setStatus(`Publish failed: ${e.message}`);
+        publishBtn.disabled = false;
+        setBusy(false);
+      }
+    }
+
+    function closeTestPreview() {
+      previewOpen = false;
+      previewOverlay.classList.add('hidden');
+      previewAudio.pause();
+      previewVideo.pause();
+      previewVideo.removeAttribute('src');
+      previewVideo.load();
+    }
+
+    function refreshPreviewStoryButtons() {
+      previewPlayBtn.classList.remove('playing-state');
+      previewPauseBtn.classList.remove('paused-state');
+      if (previewAudio.paused) {
+        previewPauseBtn.classList.add('paused-state');
+      } else {
+        previewPlayBtn.classList.add('playing-state');
+      }
+    }
+
+    function openTestPreview() {
+      if (!recordingBlob || !items.length) return;
+      previewOpen = true;
+      hasPreviewed = true;
+      previewOverlay.classList.remove('hidden');
+      previewEmpty.classList.add('hidden');
+      previewCaption.textContent = '';
+      previewCaptionBelow.textContent = 'Transcript line will appear here while the story plays.';
+      previewTranscript.textContent = previewSegments.length
+        ? previewSegments.map((s) => s.Content).filter(Boolean).join(' ').trim()
+        : 'Transcript is generated during publish.';
+      previewAudio.src = recordingUrl || URL.createObjectURL(recordingBlob);
+      previewAudio.currentTime = 0;
+
+      const localMedia = items.map((it) => ({ kind: it.kind, previewUrl: it.previewUrl }));
+      const localMarkers = markers.slice(0, localMedia.length);
+      while (localMarkers.length < localMedia.length) localMarkers.push(0);
+
+      let viewIndex = 0;
+      function render(i) {
+        if (!previewOpen) return;
+        viewIndex = Math.max(0, Math.min(i, localMedia.length - 1));
+        const m = localMedia[viewIndex];
+
+        previewImg.classList.add('hidden');
+        previewVideo.classList.add('hidden');
+        previewVideo.pause();
+        previewVideo.removeAttribute('src');
+        previewVideo.load();
+
+        if (m.kind === 'video') {
+          previewVideo.muted = false;
+          previewVideo.volume = VIDEO_BG_VOLUME;
+          previewVideo.defaultMuted = false;
+          previewVideo.src = m.previewUrl;
+          previewVideo.classList.remove('hidden');
+          previewVideo.onloadeddata = () => {
+            const t = previewAudio.currentTime || 0;
+            const startT = Number(localMarkers[viewIndex] || 0);
+            const rel = Math.max(0, t - startT);
+            try { previewVideo.currentTime = rel; } catch (_) {}
+            if (!previewAudio.paused) previewVideo.play().catch(() => {});
+            previewVideo.onloadeddata = null;
+          };
+        } else {
+          previewImg.src = m.previewUrl;
+          previewImg.classList.remove('hidden');
+        }
+        previewMeta.textContent = `Item ${viewIndex + 1} of ${localMedia.length}`;
+      }
+
+      render(0);
+
+      previewAudio.ontimeupdate = () => {
+        if (!previewOpen) return;
+        const t = previewAudio.currentTime || 0;
+        const idx = slideFromMarkers(localMarkers, t);
+        if (idx !== viewIndex) render(idx);
+
+        const cur = localMedia[viewIndex];
+        const startT = Number(localMarkers[viewIndex] || 0);
+        const rel = Math.max(0, t - startT);
+        if (cur.kind === 'video' && !previewVideo.classList.contains('hidden')) {
+          if (!previewVideo.muted && Math.abs((previewVideo.volume || 0) - VIDEO_BG_VOLUME) > 0.01) {
+            previewVideo.volume = VIDEO_BG_VOLUME;
+          }
+          if (Math.abs((previewVideo.currentTime || 0) - rel) > 1.2) {
+            try { previewVideo.currentTime = rel; } catch (_) {}
+          }
+          if (!previewAudio.paused && previewVideo.paused) {
+            previewVideo.play().catch(() => {});
+          }
+        }
+        const liveLine = segmentCaption(previewSegments, t);
+        previewCaption.textContent = liveLine;
+        previewCaptionBelow.textContent = liveLine || 'Narration playing...';
+      };
+
+      previewAudio.onpause = () => {
+        if (!previewVideo.classList.contains('hidden')) previewVideo.pause();
+        refreshPreviewStoryButtons();
+      };
+      previewAudio.onplay = () => {
+        if (!previewVideo.classList.contains('hidden')) {
+          previewVideo.muted = false;
+          previewVideo.volume = VIDEO_BG_VOLUME;
+          previewVideo.play().catch(() => {});
+        }
+        refreshPreviewStoryButtons();
+      };
+      previewVideo.onvolumechange = () => {
+        if (!previewVideo.muted && previewVideo.volume > VIDEO_BG_VOLUME) {
+          previewVideo.volume = VIDEO_BG_VOLUME;
+        }
+      };
+
+      previewPrevBtn.onclick = () => {
+        const n = Math.max(0, viewIndex - 1);
+        render(n);
+        previewAudio.currentTime = Number(localMarkers[n] || 0);
+      };
+      previewNextBtn.onclick = () => {
+        const n = Math.min(localMedia.length - 1, viewIndex + 1);
+        render(n);
+        previewAudio.currentTime = Number(localMarkers[n] || 0);
+      };
+      previewPlayBtn.onclick = () => {
+        previewAudio.play().catch(() => {});
+      };
+      previewPauseBtn.onclick = () => {
+        previewAudio.pause();
+      };
+      previewRestartBtn.onclick = () => {
+        render(0);
+        previewAudio.currentTime = 0;
+        previewAudio.play().catch(() => {});
+      };
+      previewFullBtn.onclick = () => {
+        toggleFullscreenFor(previewVideo.classList.contains('hidden') ? previewImg.parentElement : previewVideo.parentElement, previewFullBtn);
+      };
+      refreshPreviewStoryButtons();
+      refreshButtons();
+      scheduleDraftSave();
+    }
+
+    async function initCreate() {
+      if (!APP_PASSWORD) {
+        document.body.innerHTML = '<div style=\"padding:24px;font-family:Verdana,sans-serif;font-size:20px;\">Missing app config. Set <code>APP_CONFIG.appPassword</code> in <code>config.js</code>.</div>';
+        return;
+      }
+      const pw = await requestPassword('Enter password to create a slideshow:');
+      if (pw !== APP_PASSWORD) {
+        document.body.innerHTML = '<div style="padding:30px;font-family:Verdana,sans-serif;font-size:28px;">Access denied.</div>';
+        return;
+      }
+      pageTitle.textContent = 'Narrated Slideshow Builder';
+      pageSub.textContent = 'Build your story: upload, record, preview, and share.';
+      setEditorContext('New story', 'new');
+      setEditorSaveState('Not saved yet');
+
+      createMode.classList.remove('hidden');
+      stepsEl.classList.remove('hidden');
+      setStep(1);
+      setStatus('Step 1: Upload your photos/videos.');
+      titleInput.addEventListener('input', () => {
+        setEditorContext(titleInput.value || 'New story', currentProjectMode);
+        markEditorDirty();
+        scheduleDraftSave();
+      });
+
+      mediaInput.addEventListener('change', async () => {
+        if (isRecording) {
+          setStatus('Please finish recording before adding more files.');
+          mediaInput.value = '';
+          return;
+        }
+
+        const accepted = Array.from(mediaInput.files || []);
+        const hadItems = items.length > 0;
+        const oldCount = items.length;
+        for (const f of accepted) {
+          const type = (f.type || '').toLowerCase();
+          const isImg = type.startsWith('image/');
+          const isVid = type.startsWith('video/');
+          if (!isImg && !isVid) continue;
+          const durationSec = isVid ? await getVideoDuration(f) : 0;
+          items.push({
+            file: f,
+            kind: isVid ? 'video' : 'image',
+            name: f.name,
+            previewUrl: URL.createObjectURL(f),
+            durationSec,
+            mimeType: f.type || (isVid ? 'video/mp4' : 'image/jpeg')
+          });
+        }
+
+        if (!hadItems && items.length) {
+          currentIndex = 0;
+        }
+
+        if ((recordingBlob || existingAudioKey) && items.length > oldCount) {
+          // Media list changed after a completed recording, so narration markers are stale.
+          recordingBlob = null;
+          existingAudioKey = '';
+          existingJobName = '';
+          existingTranscriptText = '';
+          existingTranscriptSegments = [];
+          hasPreviewed = false;
+          markers = [0];
+          if (recordingUrl) {
+            URL.revokeObjectURL(recordingUrl);
+            recordingUrl = null;
+          }
+          createAudio.classList.add('hidden');
+          shareWrap.classList.add('hidden');
+          shareLink.textContent = '';
+          setStatus('New media added. Please record again before sharing.');
+        }
+
+        renderCurrentItem();
+        renderReorderList();
+        refreshButtons();
+
+        if (items.length) {
+          if (!recordingBlob) {
+            setStatus('Step 2: Reorder if needed, then record your story.');
+          }
+          setStep(2);
+        } else {
+          setStatus('Step 1: Upload your photos/videos.');
+          setStep(1);
+        }
+
+        // Allow selecting the same file again in future picker opens.
+        mediaInput.value = '';
+        markEditorDirty();
+        scheduleDraftSave();
+      });
+
+      prevBtn.onclick = () => {
+        currentIndex = Math.max(0, currentIndex - 1);
+        renderCurrentItem();
+        refreshButtons();
+        scheduleDraftSave();
+      };
+
+      nextBtn.onclick = () => {
+        if (currentIndex >= items.length - 1) return;
+        currentIndex += 1;
+        if (isRecording) markers[currentIndex] = elapsedSeconds();
+        renderCurrentItem();
+        refreshButtons();
+        if (isRecording) markEditorDirty();
+        if (isRecording) scheduleDraftSave(200);
+      };
+
+      videoPlayBtn.onclick = () => {
+        if (!items.length || items[currentIndex]?.kind !== 'video') return;
+        createVideo.muted = false;
+        createVideo.volume = VIDEO_BG_VOLUME;
+        createVideo.play().then(() => {
+          refreshVideoPreviewState();
+        }).catch(() => {});
+      };
+
+      videoPauseBtn.onclick = () => {
+        if (!items.length || items[currentIndex]?.kind !== 'video') return;
+        createVideo.pause();
+        refreshVideoPreviewState();
+      };
+      createFullBtn.onclick = () => {
+        toggleFullscreenFor(createVideo.classList.contains('hidden') ? createImg.parentElement : createVideo.parentElement, createFullBtn);
+      };
+
+      createVideo.addEventListener('play', refreshVideoPreviewState);
+      createVideo.addEventListener('pause', refreshVideoPreviewState);
+      createVideo.addEventListener('ended', refreshVideoPreviewState);
+      createVideo.addEventListener('volumechange', () => {
+        if (!createVideo.muted && createVideo.volume > VIDEO_BG_VOLUME) {
+          createVideo.volume = VIDEO_BG_VOLUME;
+        }
+      });
+
+      startBtn.onclick = async () => {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') ? 'audio/webm;codecs=opus' : 'audio/webm';
+          mediaRecorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 48000 });
+          chunks = [];
+          markers = [0];
+          currentIndex = 0;
+          renderCurrentItem();
+
+          mediaRecorder.ondataavailable = (e) => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+          mediaRecorder.onstop = () => {
+            recordingBlob = new Blob(chunks, { type: mimeType });
+            hasPreviewed = false;
+            if (recordingUrl) URL.revokeObjectURL(recordingUrl);
+            recordingUrl = URL.createObjectURL(recordingBlob);
+            createAudio.src = recordingUrl;
+            createAudio.classList.remove('hidden');
+            stream.getTracks().forEach((t) => t.stop());
+            refreshButtons();
+            markEditorDirty();
+            scheduleDraftSave();
+          };
+
+          startMs = Date.now();
+          pausedTotalMs = 0;
+          pausedAtMs = 0;
+          isRecording = true;
+          isPaused = false;
+
+          mediaRecorder.start();
+          timerInterval = setInterval(updateTimer, 250);
+          setStatus('Step 3: Recording. Talk, then click Next to move to next item.');
+          setStep(3);
+          refreshButtons();
+        } catch (e) {
+          setStatus(`Could not start recording: ${e.message}`);
+        }
+      };
+
+      pauseBtn.onclick = () => {
+        if (!mediaRecorder || !isRecording || isPaused) return;
+        mediaRecorder.pause();
+        isPaused = true;
+        pausedAtMs = Date.now();
+        setStatus('Recording paused. Click Resume.');
+        refreshButtons();
+      };
+
+      resumeBtn.onclick = () => {
+        if (!mediaRecorder || !isRecording || !isPaused) return;
+        mediaRecorder.resume();
+        isPaused = false;
+        pausedTotalMs += Date.now() - pausedAtMs;
+        pausedAtMs = 0;
+        setStatus('Recording resumed.');
+        refreshButtons();
+      };
+
+      stopBtn.onclick = () => {
+        if (!mediaRecorder || !isRecording) return;
+        if (isPaused) {
+          pausedTotalMs += Date.now() - pausedAtMs;
+          pausedAtMs = 0;
+          isPaused = false;
+        }
+        isRecording = false;
+        mediaRecorder.stop();
+        clearInterval(timerInterval);
+        timerInterval = null;
+        updateTimer();
+        setStep(4);
+        refreshButtons();
+        setStatus('Step 5: Preview your story, then click "Create Share Link".');
+        openTestPreview();
+      };
+
+      redoBtn.onclick = () => {
+        if (isRecording) return;
+        items.forEach((it) => {
+          if (it.previewUrl) URL.revokeObjectURL(it.previewUrl);
+        });
+        items = [];
+        currentIndex = 0;
+        recordingBlob = null;
+        existingAudioKey = '';
+        existingJobName = '';
+        existingTranscriptText = '';
+        existingTranscriptSegments = [];
+        currentProjectId = '';
+        currentProjectMode = 'new';
+        hasPreviewed = false;
+        lastDraftSavedAt = 0;
+        if (recordingUrl) {
+          URL.revokeObjectURL(recordingUrl);
+          recordingUrl = null;
+        }
+        titleInput.value = '';
+        shareWrap.classList.add('hidden');
+        shareLink.textContent = '';
+        createAudio.classList.add('hidden');
+        markers = [0];
+        timerEl.textContent = '00:00';
+        renderReorderList();
+        renderCurrentItem();
+        setStatus('Start over complete. Step 1: Upload your photos/videos.');
+        setStep(1);
+        refreshButtons();
+        setEditorContext('New story', 'new');
+        setEditorSaveState('Not saved yet');
+        clearDraftRecord().catch(() => {});
+      };
+
+      publishBtn.onclick = publish;
+      newProjectBtn.onclick = () => {
+        startNewProject().catch(() => {});
+      };
+      testBtn.onclick = openTestPreview;
+      shareBtn.onclick = async () => {
+        const url = shareLink.querySelector('a')?.href || '';
+        if (!url) return;
+        const ok = await copyText(url);
+        setStatus(ok ? 'Link copied. Paste it into text or email.' : 'Could not copy link. You can open it and copy.');
+      };
+      openShareBtn.onclick = () => {
+        const url = shareLink.querySelector('a')?.href || '';
+        if (!url) return;
+        window.open(url, '_blank', 'noopener');
+      };
+      editShareBtn.onclick = () => {
+        if (!currentProjectId) return;
+        loadProjectIntoBuilder(currentProjectId).catch(() => {});
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      };
+      previewCloseBtn.onclick = closeTestPreview;
+
+      renderCreatedHistory();
+      resumePendingMonitors();
+      if (editStoryId) {
+        await loadProjectIntoBuilder(editStoryId);
+      } else {
+        await restoreDraftIfAvailable();
+      }
+      refreshButtons();
+    }
+
+    function slideFromMarkers(markers, t) {
+      let idx = 0;
+      for (let i = 0; i < markers.length; i += 1) {
+        if (t >= Number(markers[i] || 0)) idx = i;
+      }
+      return idx;
+    }
+
+    function segmentCaption(segments, t) {
+      for (const s of segments) {
+        const b = Number(s.BeginAudioTime || 0);
+        const e = Number(s.EndAudioTime || 0);
+        if (t >= b && t <= e) return s.Content || '';
+      }
+      return '';
+    }
+
+    async function initView(id) {
+      viewMode.classList.remove('hidden');
+      setStatus('Loading slideshow...');
+
+      try {
+        let res = await fetch(`${API_BASE}/api/slideshow/refresh?id=${encodeURIComponent(id)}`);
+        if (!res.ok) {
+          res = await fetch(`${API_BASE}/api/slideshow/get?id=${encodeURIComponent(id)}`);
+        }
+        if (!res.ok) throw new Error(`Load failed (${res.status})`);
+        let data = await res.json();
+
+        // Backward compatibility: old manifests used photos[]
+        const media = Array.isArray(data.media)
+          ? data.media
+          : (Array.isArray(data.photos) ? data.photos.map((p) => ({ ...p, kind: 'image', mimeType: 'image/jpeg', durationSec: 0 })) : []);
+
+        if (!media.length) throw new Error('No media found');
+
+        const markersLocal = Array.isArray(data.markers) ? data.markers : [0];
+        let txSegments = Array.isArray(data.transcriptSegments) ? data.transcriptSegments : [];
+
+        const realTitle = data.title || 'Narrated Slideshow';
+        pageTitle.textContent = realTitle;
+        pageSub.textContent = 'You are watching this narrated story.';
+        viewTitle.textContent = '';
+        fullTranscript.textContent = data.transcriptText || 'Transcript is still processing...';
+        narrationAudio.src = `${API_BASE}/api/audio/${data.audioKey}`;
+
+        const processingStatus = (data.processingStatus || '').toLowerCase();
+        if (processingStatus && processingStatus !== 'ready') {
+          setStatus('This story is still processing. It will update automatically.');
+        }
+
+        let viewIndex = 0;
+        let renderSeq = 0;
+        const mediaUrlCache = new Map();
+        const mediaWarmCache = new Set();
+        async function prefetchMediaAt(i) {
+          const idx = Math.max(0, Math.min(i, media.length - 1));
+          const m = media[idx];
+          if (!m || !m.key) return;
+          const warmKey = `${idx}:${m.key}`;
+          if (mediaWarmCache.has(warmKey)) return;
+          const mediaUrl = await getMediaPlaybackUrl(m.key, mediaUrlCache);
+          mediaWarmCache.add(warmKey);
+
+          const isVideo = (m.kind || '').toLowerCase() === 'video' || (m.mimeType || '').startsWith('video/');
+          if (isVideo) {
+            const v = document.createElement('video');
+            v.preload = 'metadata';
+            v.src = mediaUrl;
+            v.load();
+            return;
+          }
+          const img = new Image();
+          img.decoding = 'async';
+          img.src = mediaUrl;
+        }
+        async function renderViewItem(i) {
+          viewIndex = Math.max(0, Math.min(i, media.length - 1));
+          const mySeq = ++renderSeq;
+          const m = media[viewIndex];
+
+          viewImg.classList.add('hidden');
+          viewVideo.classList.add('hidden');
+          viewVideo.pause();
+          viewVideo.removeAttribute('src');
+          viewVideo.load();
+          viewEmpty.classList.add('hidden');
+
+          const mediaUrl = await getMediaPlaybackUrl(m.key, mediaUrlCache);
+          if (mySeq !== renderSeq) return;
+
+          if ((m.kind || '').toLowerCase() === 'video' || (m.mimeType || '').startsWith('video/')) {
+            viewVideo.muted = false;
+            viewVideo.volume = VIDEO_BG_VOLUME;
+            viewVideo.defaultMuted = false;
+            viewVideo.playsInline = true;
+            viewVideo.src = mediaUrl;
+            viewVideo.classList.remove('hidden');
+            viewVideo.onloadeddata = () => {
+              const t = narrationAudio.currentTime || 0;
+              const startT = Number(markersLocal[viewIndex] || 0);
+              const rel = Math.max(0, t - startT);
+              try { viewVideo.currentTime = rel; } catch (_) {}
+              if (!narrationAudio.paused) viewVideo.play().catch(() => {});
+              viewVideo.onloadeddata = null;
+            };
+          } else {
+            viewImg.src = mediaUrl;
+            viewImg.classList.remove('hidden');
+          }
+
+          viewMeta.textContent = `Item ${viewIndex + 1} of ${media.length}`;
+          // Warm likely next/previous items to make transitions feel instant.
+          prefetchMediaAt(viewIndex + 1).catch(() => {});
+          prefetchMediaAt(viewIndex - 1).catch(() => {});
+        }
+
+        await renderViewItem(0);
+        prefetchMediaAt(1).catch(() => {});
+
+        narrationAudio.addEventListener('timeupdate', () => {
+          const t = narrationAudio.currentTime || 0;
+          const idx = slideFromMarkers(markersLocal, t);
+          if (idx !== viewIndex) {
+            renderViewItem(idx).catch(() => {});
+          }
+
+          const cur = media[viewIndex];
+          const startT = Number(markersLocal[viewIndex] || 0);
+          const rel = Math.max(0, t - startT);
+
+          if ((cur.kind || '').toLowerCase() === 'video' || (cur.mimeType || '').startsWith('video/')) {
+            if (!viewVideo.classList.contains('hidden')) {
+              if (!viewVideo.muted && Math.abs((viewVideo.volume || 0) - VIDEO_BG_VOLUME) > 0.01) {
+                viewVideo.volume = VIDEO_BG_VOLUME;
+              }
+              if (Math.abs((viewVideo.currentTime || 0) - rel) > 1.2) {
+                try { viewVideo.currentTime = rel; } catch (_) {}
+              }
+              if (!narrationAudio.paused && viewVideo.paused) {
+                viewVideo.play().catch(() => {});
+              }
+            }
+          }
+
+          const liveLine = segmentCaption(txSegments, t);
+          viewCaption.textContent = liveLine;
+          viewCaptionBelow.textContent = liveLine || 'Narration playing...';
+        });
+
+        narrationAudio.addEventListener('pause', () => {
+          if (!viewVideo.classList.contains('hidden')) viewVideo.pause();
+          viewPlayBtn.classList.remove('playing-state');
+          viewPauseBtn.classList.add('paused-state');
+        });
+
+        narrationAudio.addEventListener('play', () => {
+          if (!viewVideo.classList.contains('hidden')) {
+            viewVideo.muted = false;
+            viewVideo.volume = VIDEO_BG_VOLUME;
+            viewVideo.play().catch(() => {});
+          }
+          viewPauseBtn.classList.remove('paused-state');
+          viewPlayBtn.classList.add('playing-state');
+        });
+        viewPlayBtn.onclick = () => {
+          narrationAudio.play().catch(() => {});
+        };
+        viewPauseBtn.onclick = () => {
+          narrationAudio.pause();
+        };
+        viewFullBtn.onclick = () => {
+          toggleFullscreenFor(viewVideo.classList.contains('hidden') ? viewImg.parentElement : viewVideo.parentElement, viewFullBtn);
+        };
+        viewPauseBtn.classList.add('paused-state');
+        viewVideo.addEventListener('volumechange', () => {
+          if (!viewVideo.muted && viewVideo.volume > VIDEO_BG_VOLUME) {
+            viewVideo.volume = VIDEO_BG_VOLUME;
+          }
+        });
+
+        viewPrevBtn.onclick = () => {
+          const n = Math.max(0, viewIndex - 1);
+          renderViewItem(n).catch(() => {});
+          narrationAudio.currentTime = Number(markersLocal[n] || 0);
+        };
+
+        viewNextBtn.onclick = () => {
+          const n = Math.min(media.length - 1, viewIndex + 1);
+          renderViewItem(n).catch(() => {});
+          narrationAudio.currentTime = Number(markersLocal[n] || 0);
+        };
+
+        const pollViewManifest = async (waitMs = 5000) => {
+          const key = `view-${id}`;
+          if (processingTimers[key]) {
+            clearTimeout(processingTimers[key]);
+            delete processingTimers[key];
+          }
+          try {
+            const r = await fetch(`${API_BASE}/api/slideshow/refresh?id=${encodeURIComponent(id)}`);
+            if (!r.ok) throw new Error('refresh failed');
+            const latest = await r.json();
+            txSegments = Array.isArray(latest.transcriptSegments) ? latest.transcriptSegments : txSegments;
+            fullTranscript.textContent = latest.transcriptText || 'Transcript is still processing...';
+            const s = (latest.processingStatus || '').toLowerCase();
+            if (s === 'ready') {
+              setStatus('Ready. Press play to watch and listen.');
+              return;
+            }
+            if (s === 'failed') {
+              setStatus(`Transcript failed: ${latest.processingError || 'Unknown error'}`);
+              return;
+            }
+          } catch (_) {
+            // Keep trying; transient refresh errors are expected on weak connections.
+          }
+          const nextWait = Math.min(30000, Math.round(waitMs * 1.5));
+          processingTimers[key] = setTimeout(() => {
+            pollViewManifest(nextWait).catch(() => {});
+          }, waitMs);
+        };
+
+        if ((data.processingStatus || '').toLowerCase() === 'ready' || data.transcriptText) {
+          setStatus('Ready. Press play to watch and listen.');
+        } else {
+          setStatus('This story is still processing. It will update automatically.');
+          pollViewManifest().catch(() => {});
+        }
+      } catch (e) {
+        setStatus(`Could not load slideshow: ${e.message}`);
+      }
+    }
+
+    if (slideshowId) {
+      initView(slideshowId);
+    } else {
+      initCreate();
+    }
+  </script>
+</body>
+</html>

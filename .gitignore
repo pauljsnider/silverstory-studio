@@ -1,0 +1,5 @@
+.DS_Store
+web/config.js
+__pycache__/
+*.pyc
+.lambda-build/
