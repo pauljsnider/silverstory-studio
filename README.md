@@ -17,6 +17,7 @@ This repository is intentionally focused on the slideshow workflow only.
 - `web/config.example.js` - Frontend config template
 - `backend/lambda_function.py` - Serverless backend for uploads, manifests, and transcription status
 - `docs/AWS_SETUP.md` - Full AWS setup and deployment guide
+- `docs/ALTERNATIVES.md` - Cost/free alternatives and tradeoffs for older-user workflows
 
 ## Quick Start
 
@@ -55,3 +56,4 @@ Set these on your Lambda function:
 
 - For reliability, keep initial test stories short.
 - For longer sessions, run a short validation story first (a few images + one short video).
+- See `docs/ALTERNATIVES.md` for mainstream free/freemium tools and cost model notes.
